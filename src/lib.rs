@@ -116,7 +116,7 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
 
             if e.attributes.len() > 0 {
                 for (k, v) in e.attributes.clone().into_iter() {
-                    data.insert(format!("@{}", k), parse_text(&v));
+                    data.insert(format!("{}", k), parse_text(&v));
                 }
             }
 
@@ -150,15 +150,15 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
             e.attributes
                 .clone()
                 .into_iter()
-                .map(|(k, v)| (format!("@{}", k), parse_text(&v)))
+                .map(|(k, v)| (format!("{}", k), parse_text(&v)))
                 .collect(),
         )),
         XMLNodeType::TextAndAttributes => Some(Value::Object(
             e.attributes
                 .clone()
                 .into_iter()
-                .map(|(k, v)| (format!("@{}", k), parse_text(&v)))
-                .chain(vec![("#text".to_string(), parse_text_contents(&e))])
+                .map(|(k, v)| (format!("{}", k), parse_text(&v)))
+                .chain(vec![("text".to_string(), parse_text_contents(&e))])
                 .collect(),
         )),
         _ => None,
