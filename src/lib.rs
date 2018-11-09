@@ -36,12 +36,17 @@
 //! }
 //! ```
 
+#![feature(test)]
+
 extern crate treexml;
+extern crate inflector;
 
 #[macro_use]
 extern crate serde_json;
+extern crate test;
 
 use serde_json::{Map, Number, Value};
+use inflector::cases::snakecase::to_snake_case;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum XMLNodeType {
@@ -116,23 +121,23 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
 
             if e.attributes.len() > 0 {
                 for (k, v) in e.attributes.clone().into_iter() {
-                    data.insert(format!("{}", k), parse_text(&v));
+                    data.insert(to_snake_case(&k), parse_text(&v));
                 }
             }
 
             for c in &e.children {
                 match convert_node_aux(c) {
                     Some(v) => {
-                        if !firstpass.contains(&c.name) {
-                            data.insert(c.name.clone(), v);
-                            firstpass.insert(c.name.clone());
+                        if !firstpass.contains(&to_snake_case(&c.name)) {
+                            data.insert(to_snake_case(&c.name), v);
+                            firstpass.insert(to_snake_case(&c.name));
                         } else {
-                            if !vectorized.contains(&c.name) {
-                                let elem = data.remove(&c.name).unwrap();
-                                data.insert(c.name.clone(), Value::Array(vec![elem, v]));
-                                vectorized.insert(c.name.clone());
+                            if !vectorized.contains(&to_snake_case(&c.name)) {
+                                let elem = data.remove(&to_snake_case(&c.name)).unwrap();
+                                data.insert(to_snake_case(&c.name.clone()), Value::Array(vec![elem, v]));
+                                vectorized.insert(to_snake_case(&c.name));
                             } else {
-                                data.get_mut(&c.name)
+                                data.get_mut(&to_snake_case(&c.name))
                                     .unwrap()
                                     .as_array_mut()
                                     .unwrap()
@@ -150,14 +155,14 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
             e.attributes
                 .clone()
                 .into_iter()
-                .map(|(k, v)| (format!("{}", k), parse_text(&v)))
+                .map(|(k, v)| (to_snake_case(&k), parse_text(&v)))
                 .collect(),
         )),
         XMLNodeType::TextAndAttributes => Some(Value::Object(
             e.attributes
                 .clone()
                 .into_iter()
-                .map(|(k, v)| (format!("{}", k), parse_text(&v)))
+                .map(|(k, v)| (to_snake_case(&k), parse_text(&v)))
                 .chain(vec![("text".to_string(), parse_text_contents(&e))])
                 .collect(),
         )),
@@ -168,13 +173,27 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
 /// Converts treexml::Element into a serde_json hashmap. The latter can be wrapped in Value::Object.
 pub fn node2object(e: &treexml::Element) -> Map<String, Value> {
     let mut data = Map::new();
-    data.insert(e.name.clone(), convert_node_aux(e).unwrap_or(Value::Null));
+    data.insert(to_snake_case(&e.name), convert_node_aux(e).unwrap_or(Value::Null));
     data
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn bench(b: &mut Bencher) {
+        let xml = include_str!("../examples/xml.xml");
+        b.iter(|| {
+            let n = test::black_box(10);
+            (0..n).for_each(|_| {
+                let xml = treexml::Document::parse(xml.as_bytes()).unwrap();
+                let xml = xml.root.unwrap();
+                let _ = node2object(&xml);
+            })
+        })
+    }
 
     #[test]
     fn node2object_empty() {
