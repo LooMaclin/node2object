@@ -126,7 +126,13 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
             for c in &e.children {
                 match convert_node_aux(c) {
                     Some(v) => {
-                        let snake_cased_name = to_snake_case(&c.name);;
+                        let snake_cased_name = to_snake_case(&c.name);
+                        use std::str::FromStr;
+                        let snake_cased_name = if snake_cased_name.eq("option") {
+                            "option_tag".to_string()
+                        } else {
+                            snake_cased_name
+                        };
                             if !vectorized.contains(&snake_cased_name) {
                                 data.insert(snake_cased_name.clone(), Value::Array(vec![v]));
                                 vectorized.insert(snake_cased_name);
