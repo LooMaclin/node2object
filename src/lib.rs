@@ -83,23 +83,6 @@ fn scan_xml_node(e: &treexml::Element) -> XMLNodeType {
 }
 
 fn parse_text(text: &str) -> Value {
-    match text.parse::<f64>() {
-        Ok(v) => match Number::from_f64(v) {
-            Some(v) => {
-                return Value::Number(v);
-            }
-            _ => {}
-        },
-        _ => {}
-    }
-
-    match text.parse::<bool>() {
-        Ok(v) => {
-            return Value::Bool(v);
-        }
-        _ => {}
-    }
-
     Value::String(text.into())
 }
 
