@@ -116,7 +116,6 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
     match scan_xml_node(e) {
         XMLNodeType::Parent => {
             let mut data = Map::new();
-            let mut firstpass = std::collections::HashSet::new();
             let mut vectorized = std::collections::HashSet::new();
 
             if e.attributes.len() > 0 {
@@ -124,26 +123,20 @@ fn convert_node_aux(e: &treexml::Element) -> Option<Value> {
                     data.insert(to_snake_case(&k), parse_text(&v));
                 }
             }
-
             for c in &e.children {
                 match convert_node_aux(c) {
                     Some(v) => {
-                        if !firstpass.contains(&to_snake_case(&c.name)) {
-                            data.insert(to_snake_case(&c.name), v);
-                            firstpass.insert(to_snake_case(&c.name));
-                        } else {
-                            if !vectorized.contains(&to_snake_case(&c.name)) {
-                                let elem = data.remove(&to_snake_case(&c.name)).unwrap();
-                                data.insert(to_snake_case(&c.name.clone()), Value::Array(vec![elem, v]));
-                                vectorized.insert(to_snake_case(&c.name));
+                        let snake_cased_name = to_snake_case(&c.name);;
+                            if !vectorized.contains(&snake_cased_name) {
+                                data.insert(snake_cased_name.clone(), Value::Array(vec![v]));
+                                vectorized.insert(snake_cased_name);
                             } else {
-                                data.get_mut(&to_snake_case(&c.name))
+                                data.get_mut(&snake_cased_name)
                                     .unwrap()
                                     .as_array_mut()
                                     .unwrap()
                                     .push(v);
                             }
-                        }
                     }
                     _ => {}
                 }
@@ -193,6 +186,23 @@ mod tests {
                 let _ = node2object(&xml);
             })
         })
+    }
+
+    #[test]
+    fn smart_list_detection() {
+        let raw_xml = treexml::Document::parse(r#"<a>
+            <b first="1"/>
+            <b first="2"/>
+            <c first="3"/>
+            </a>
+        "#.as_bytes()).unwrap().root.unwrap();
+        let actual = Value::Object(node2object(&raw_xml));
+        assert_eq!(actual, json!({
+            "a": {
+                "b": [ { "first": 1.0 }, { "first": 2.0 } ],
+                "c": [ { "first": 3.0 } ]
+            }
+        }));
     }
 
     #[test]
