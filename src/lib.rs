@@ -188,8 +188,8 @@ mod tests {
         let actual = Value::Object(node2object(&raw_xml));
         assert_eq!(actual, json!({
             "a": {
-                "b": [ { "first": 1.0 }, { "first": 2.0 } ],
-                "c": [ { "first": 3.0 } ]
+                "b": [ { "first": "1" }, { "first": "2" } ],
+                "c": [ { "first": "3" } ]
             }
         }));
     }
